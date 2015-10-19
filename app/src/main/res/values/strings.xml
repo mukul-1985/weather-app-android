@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Daily Weather</string>
+    <!-- Setting menu item -->
+    <string name="menu_settings">Settings</string>
+    <!-- title for refresh menu item -->
+    <string name="menu_refresh">Refresh</string>
 </resources>

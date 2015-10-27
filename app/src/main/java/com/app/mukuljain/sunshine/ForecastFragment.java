@@ -2,7 +2,9 @@ package com.app.mukuljain.sunshine;
 
 import android.app.Fragment;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -37,6 +39,12 @@ public class ForecastFragment extends Fragment {
     }
 
     @Override
+    public void onStart() {
+        super.onStart();
+        updateWeather();
+    }
+
+    @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         inflater.inflate(R.menu.forecastfragment, menu);
     }
@@ -45,12 +53,18 @@ public class ForecastFragment extends Fragment {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.action_refresh:
-                FetchWeatherForecastAsyncTask fetchWeatherForecastAsyncTask = new FetchWeatherForecastAsyncTask(mForecastAdapter);
-                fetchWeatherForecastAsyncTask.execute("94043");
+                updateWeather();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+    private void updateWeather(){
+        FetchWeatherForecastAsyncTask fetchWeatherForecastAsyncTask = new FetchWeatherForecastAsyncTask(mForecastAdapter, getActivity());
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        String location = sharedPreferences.getString(getString(R.string.pref_location_key), getString(R.string.pref_location_default));
+        fetchWeatherForecastAsyncTask.execute(location);
     }
 
     @Nullable

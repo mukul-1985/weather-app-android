@@ -1,7 +1,10 @@
 package com.app.mukuljain.sunshine;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.preference.PreferenceManager;
 import android.text.format.Time;
 import android.util.Log;
 import android.widget.ArrayAdapter;
@@ -26,9 +29,11 @@ public class FetchWeatherForecastAsyncTask extends AsyncTask<String, Void, Strin
     private final static String LOG_TAG = FetchWeatherForecastAsyncTask.class.getSimpleName();
 
     private ArrayAdapter<String> mArrayAdapter;
+    private Context mContext;
 
-    public FetchWeatherForecastAsyncTask(ArrayAdapter<String> mForecastAdapter) {
+    public FetchWeatherForecastAsyncTask(ArrayAdapter<String> mForecastAdapter, Context context) {
         this.mArrayAdapter = mForecastAdapter;
+        this.mContext = context;
     }
 
     @Override
@@ -128,11 +133,11 @@ public class FetchWeatherForecastAsyncTask extends AsyncTask<String, Void, Strin
     /**
      * Take the String representing the complete forecast in JSON Format and
      * pull out the data we need to construct the Strings needed for the wireframes.
-     *
+     * <p/>
      * Fortunately parsing is easy:  constructor takes the JSON string and converts it
      * into an Object hierarchy for us.
      */
-    private String[] getWeatherDataFromJson(String forecastJsonStr, int numDays) throws JSONException{
+    private String[] getWeatherDataFromJson(String forecastJsonStr, int numDays) throws JSONException {
         // these are the names of the json object that needs to be extracted
         final String OWM_LIST = "list";
         final String OWM_WEATHER = "weather";
@@ -162,6 +167,16 @@ public class FetchWeatherForecastAsyncTask extends AsyncTask<String, Void, Strin
         dayTime = new Time();
 
         String[] resultStrs = new String[numDays];
+
+        // Data is fetched in Celsius by default.
+        // If user prefers to see in Fahrenheit, convert the values here.
+        // We do this rather than fetching in Fahrenheit so that the user can
+        // change this option without us having to re-fetch the data once
+        // we start storing the values in a database.
+        SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(mContext);
+        String unitType = sharedPrefs.getString(mContext.getString(R.string.pref_temperature_units_key),
+                mContext.getString(R.string.pref_temperature_units_metric));
+
         for (int i = 0; i < weatherArray.length(); i++) {
             // For now, using the format "Day, description, hi/low"
             String day;
@@ -189,7 +204,7 @@ public class FetchWeatherForecastAsyncTask extends AsyncTask<String, Void, Strin
             double high = temperatureObject.getDouble(OWM_MAX);
             double low = temperatureObject.getDouble(OWM_MIN);
 
-            highAndLow = formatHighLows(high, low);
+            highAndLow = formatHighLows(high, low, unitType);
             resultStrs[i] = day + " - " + description + " - " + highAndLow;
         }
 
@@ -199,18 +214,25 @@ public class FetchWeatherForecastAsyncTask extends AsyncTask<String, Void, Strin
     /**
      * Prepare the weather high/lows for presentation.
      */
-    private String formatHighLows(double high, double low) {
-        // for presentation, assume user don't care about the tenths of degree
+    private String formatHighLows(double high, double low, String unitType) {
+
+        if (unitType.equals(mContext.getString(R.string.pref_temperature_units_imperial))) {
+            high = (high * 1.8) + 32;
+            low = (low * 1.8) + 32;
+        } else if (!unitType.equals(mContext.getString(R.string.pref_temperature_units_metric))) {
+            Log.d(LOG_TAG, "Unit type not found " + unitType);
+        }
+
         long roundedHigh = Math.round(high);
         long roundedLow = Math.round(low);
 
-        String highLowStr = high + "/" + low;
+        String highLowStr = roundedHigh + "/" + roundedLow;
         return highLowStr;
     }
 
     /**
-     *  The date/time conversion code is going to be moved outside the asynctask later,
-     *  so for convenience we're breaking it out into its own method now.
+     * The date/time conversion code is going to be moved outside the asynctask later,
+     * so for convenience we're breaking it out into its own method now.
      */
     private String getReadableDateString(long dateTime) {
         // Because the API returns a unix timestamp (measured in seconds),

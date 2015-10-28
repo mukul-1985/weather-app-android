@@ -27,7 +27,7 @@ public class TestFetchWeatherTask extends AndroidTestCase {
                 WeatherContract.LocationEntry.COLUMN_LOCATION_SETTING + " = ?",
                 new String[]{ADD_LOCATION_SETTING});
 
-        FetchWeatherForecastAsyncTask fwt = new FetchWeatherForecastAsyncTask(null, getContext());
+        FetchWeatherForecastAsyncTask fwt = new FetchWeatherForecastAsyncTask(getContext());
         long locationId = fwt.addLocation(ADD_LOCATION_SETTING, ADD_LOCATION_CITY,
                 ADD_LOCATION_LAT, ADD_LOCATION_LON);
 

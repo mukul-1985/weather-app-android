@@ -55,7 +55,6 @@ public class WeatherService extends IntentService {
         String format = "json";
         String units = "metric";
         int numDays = 14;
-        //String apiKey = "2dbb68e48d1ed51c6d8a803dba725704";
 
         try {
             final String FORECAST_BASE_URL = "http://api.openweathermap.org/data/2.5/forecast/daily?";

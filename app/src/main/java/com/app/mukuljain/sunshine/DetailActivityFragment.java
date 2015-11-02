@@ -7,6 +7,8 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.CursorLoader;
 import android.support.v4.content.Loader;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -63,14 +65,17 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
     public static final int COL_WEATHER_CONDITION_ID = 9;
 
     private ImageView mIconView;
-    private TextView mFriendlyDateView;
+    //private TextView mFriendlyDateView;
     private TextView mDateView;
     private TextView mDescriptionView;
     private TextView mHighTempView;
     private TextView mLowTempView;
     private TextView mHumidityView;
+    private TextView mHumidityLabelView;
     private TextView mWindView;
+    private TextView mWindLabelView;
     private TextView mPressureView;
+    private TextView mPressureLabelView;
 
     public DetailActivityFragment() {
         setHasOptionsMenu(true);
@@ -101,13 +106,16 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
         View rootView = inflater.inflate(R.layout.fragment_detail, container, false);
         mIconView = (ImageView) rootView.findViewById(R.id.detail_activity_icon);
         mDateView = (TextView) rootView.findViewById(R.id.detail_activity_date_textview);
-        mFriendlyDateView = (TextView) rootView.findViewById(R.id.detail_activity_day_textview);
+        //mFriendlyDateView = (TextView) rootView.findViewById(R.id.detail_activity_day_textview);
         mDescriptionView = (TextView) rootView.findViewById(R.id.detail_activity_forecast_textview);
         mHighTempView = (TextView) rootView.findViewById(R.id.detail_activity_high_textview);
         mLowTempView = (TextView) rootView.findViewById(R.id.detail_activity_low_textview);
         mHumidityView = (TextView) rootView.findViewById(R.id.detail_humidity_textview);
+        mHumidityLabelView = (TextView) rootView.findViewById(R.id.detail_humidity_label_textview);
         mWindView = (TextView) rootView.findViewById(R.id.detail_wind_textview);
+        mWindLabelView = (TextView) rootView.findViewById(R.id.detail_wind_label_textview);
         mPressureView = (TextView) rootView.findViewById(R.id.detail_pressure_textview);
+        mPressureLabelView = (TextView) rootView.findViewById(R.id.detail_pressure_label_textview);
         return rootView;
     }
 
@@ -142,59 +150,88 @@ public class DetailActivityFragment extends Fragment implements LoaderManager.Lo
                     null,
                     null);
         }
+
+        getView().setVisibility(View.INVISIBLE);
+
         return null;
     }
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
         Log.v(LOG_TAG, "In onLoadFinished");
-        if (!data.moveToFirst()) {
-            return;
+        if (data != null && data.moveToFirst()) {
+            getView().setVisibility(View.VISIBLE);
+
+            // Read weather condition ID from cursor
+            int weatherId = data.getInt(COL_WEATHER_CONDITION_ID);
+
+            mIconView.setImageResource(Utility.getArtResourceForWeatherCondition(weatherId));
+
+            //String dayNameString = Utility.getDayName(getActivity(), data.getLong(COL_WEATHER_DATE));
+
+            //mFriendlyDateView.setText(dayNameString);
+
+            String dateString = Utility.getFullFriendlyDayString(getActivity(), data.getLong(COL_WEATHER_DATE));
+
+            mDateView.setText(dateString);
+
+            String weatherDescription = data.getString(COL_WEATHER_DESC);
+
+            mDescriptionView.setText(weatherDescription);
+
+            boolean isMetric = Utility.isMetric(getActivity());
+
+            String high = Utility.formatTemperature(getActivity(),
+                    data.getDouble(COL_WEATHER_MAX_TEMP), isMetric);
+
+            mHighTempView.setText(high);
+
+            String low = Utility.formatTemperature(getActivity(),
+                    data.getDouble(COL_WEATHER_MIN_TEMP), isMetric);
+
+            mLowTempView.setText(low);
+
+            // Read humidity from cursor and update view
+            float humidity = data.getFloat(COL_WEATHER_HUMIDITY);
+            mHumidityView.setText(getActivity().getString(R.string.format_humidity, humidity));
+            mHumidityView.setContentDescription(getString(R.string.a11y_humidity, mHumidityView.getText()));
+            mHumidityLabelView.setContentDescription(mHumidityView.getContentDescription());
+
+            // Read wind speed and direction from cursor and update view
+            float windSpeedStr = data.getFloat(COL_WEATHER_WIND_SPEED);
+            float windDirStr = data.getFloat(COL_WEATHER_DEGREES);
+            mWindView.setText(Utility.getFormattedWind(getActivity(), windSpeedStr, windDirStr));
+            mWindView.setContentDescription(getString(R.string.a11y_wind, mWindView.getText()));
+            mWindLabelView.setContentDescription(mWindView.getContentDescription());
+
+            // Read pressure from cursor and update view
+            float pressure = data.getFloat(COL_WEATHER_PRESSURE);
+            mPressureView.setText(getString(R.string.format_pressure, pressure));
+            mPressureView.setContentDescription(getString(R.string.a11y_pressure, mPressureView.getText()));
+            mPressureLabelView.setContentDescription(mPressureView.getContentDescription());
         }
 
-        // Read weather condition ID from cursor
-        int weatherId = data.getInt(COL_WEATHER_CONDITION_ID);
+        AppCompatActivity activity = (AppCompatActivity) getActivity();
+        Toolbar toolbarView = (Toolbar) getView().findViewById(R.id.toolbar);
 
-        mIconView.setImageResource(Utility.getArtResourceForWeatherCondition(weatherId));
+        // We need to start the enter transition after the data has loaded
+        if (activity instanceof DetailActivity) {
+            activity.supportStartPostponedEnterTransition();
 
-        String dayNameString = Utility.getDayName(getActivity(), data.getLong(COL_WEATHER_DATE));
+            if (null != toolbarView) {
+                activity.setSupportActionBar(toolbarView);
 
-        mFriendlyDateView.setText(dayNameString);
-
-        String dateString = Utility.getFormattedMonthDay(getActivity(), data.getLong(COL_WEATHER_DATE));
-
-        mDateView.setText(dateString);
-
-        String weatherDescription =
-                data.getString(COL_WEATHER_DESC);
-
-        mDescriptionView.setText(weatherDescription);
-
-        boolean isMetric = Utility.isMetric(getActivity());
-
-        String high = Utility.formatTemperature(getActivity(),
-                data.getDouble(COL_WEATHER_MAX_TEMP), isMetric);
-
-        mHighTempView.setText(high);
-
-        String low = Utility.formatTemperature(getActivity(),
-                data.getDouble(COL_WEATHER_MIN_TEMP), isMetric);
-
-        mLowTempView.setText(low);
-
-        // Read humidity from cursor and update view
-        float humidity = data.getFloat(COL_WEATHER_HUMIDITY);
-        mHumidityView.setText(getActivity().getString(R.string.format_humidity, humidity));
-
-        // Read wind speed and direction from cursor and update view
-        float windSpeedStr = data.getFloat(COL_WEATHER_WIND_SPEED);
-        float windDirStr = data.getFloat(COL_WEATHER_DEGREES);
-        mWindView.setText(Utility.getFormattedWind(getActivity(), windSpeedStr, windDirStr));
-
-        // Read pressure from cursor and update view
-        float pressure = data.getFloat(COL_WEATHER_PRESSURE);
-        mPressureView.setText(getActivity().getString(R.string.format_pressure, pressure));
-
+                activity.getSupportActionBar().setDisplayShowTitleEnabled(false);
+                activity.getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+            }
+        } /*else {
+            if (null != toolbarView) {
+                Menu menu = toolbarView.getMenu();
+                if (null != menu) menu.clear();
+                toolbarView.inflateMenu(R.menu.detail);
+                //finishCreatingMenu(toolbarView.getMenu());
+            }
+        }*/
     }
 
     @Override

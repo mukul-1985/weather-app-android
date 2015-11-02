@@ -60,7 +60,6 @@ public class WeatherContract {
         public static final String COLUMN_LOCATION_SETTING = "location_setting";
 
         // Human readable location string, provided by the API.  Because for styling,
-        // "Mountain View" is more recognizable than 94043.
         public static final String COLUMN_CITY_NAME = "city_name";
 
         // In order to uniquely pinpoint the location on the map when we launch the
